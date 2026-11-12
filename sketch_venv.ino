@@ -1,136 +1,119 @@
-#include <ESP32Servo.h>
+#include <Servo.h>
 
-// Definição dos pinos
-const int pinPescoco      = 4;
-const int pinCoxaDireita  = 5;
-const int pinCoxaEsquerda = 6;
-const int pinPeDireiro    = 7;
-const int pinPeEsquerdo   = 15;
+Servo pescoco;
+Servo coxaEsquerda;
+Servo peEsquerdo;
+Servo coxaDireita;
+Servo peDireito;
 
-// Objetos Servo
-Servo servoPescoco;
-Servo servoCoxaDireita;
-Servo servoCoxaEsquerda;
-Servo servoPeDireiro;
-Servo servoPeEsquerdo;
-
-// Variáveis para controlar o tempo da cabeça
-unsigned long tempoAnteriorCabeca = 0;
-int estadoCabeca = 0;
-const unsigned long intervaloCabeca = 2000; // 2 segundos em cada posição
-
-// Variáveis para controlar o tempo e os passos das pernas
-unsigned long tempoAnteriorPernas = 0;
-int estadoPernas = 0;
-const unsigned long intervaloPernas = 500; // 500ms entre cada movimento de perna
+// Variáveis de controle de tempo (substituem o delay)
+unsigned long tempoAnterior = 0;
+int estadoMovimento = 0;
 
 void setup() {
-  Serial.begin(115200);
+  Serial.begin(9600);    // Inicializa a comunicação serial para visualizar os prints
 
-  // Anexando os motores com os limites seguros do MG90S (500us a 2400us)
-  servoPescoco.attach(pinPescoco, 500, 2400);
-  servoCoxaDireita.attach(pinCoxaDireita, 500, 2400);
-  servoCoxaEsquerda.attach(pinCoxaEsquerda, 500, 2400);
-  servoPeDireiro.attach(pinPeDireiro, 500, 2400);
-  servoPeEsquerdo.attach(pinPeEsquerdo, 500, 2400);
+  pescoco.attach(6);  // Pino 6 = Pescoço (Angulo seguro = 67)
+  coxaEsquerda.attach(3);  // Pino 3 = Coxa Esquerda (Angulo seguro = 70)
+  peEsquerdo.attach(2);  // Pino 2 = Pé Esquerdo (Angulo seguro = 40)
+  coxaDireita.attach(5);  // Pino 5 = Coxa Direita (Angulo seguro = 0)
+  peDireito.attach(4);  // Pino 4 = Pé Direito (Angulo seguro = 0 | Limite de angulo = 50)
 
-  // Posição inicial de todas as juntas em 70°
-  servoPescoco.write(70);
-  servoCoxaEsquerda.write(70);
-  servoPeEsquerdo.write(70);
-  servoCoxaDireita.write(70);
-  servoPeDireiro.write(70);
-  
-  Serial.println("Robô inicializado e pernas posicionadas em 70°!");
+  // POSIÇÃO INICIAL DE CADA SERVO MOTOR
+  pescoco.write(67);
+  coxaEsquerda.write(100);
+  peEsquerdo.write(40);
+  coxaDireita.write(30);
+  peDireito.write(40);
 }
 
 void loop() {
-  // 1. A cabeça roda de forma independente em segundo plano
-  atualizarCabeca();
 
-  // 2. As pernas executam a sequência alternada em segundo plano
-  atualizarPernas();
+  //controlarPescoco();
+  andarFrente();
+
 }
 
-// Função independente para controlar a cabeça do robô
-void atualizarCabeca() {
+void controlarPescoco() {
   unsigned long tempoAtual = millis();
 
-  if (tempoAtual - tempoAnteriorCabeca >= intervaloCabeca) {
-    tempoAnteriorCabeca = tempoAtual;
+  // Verifica se já passaram os milissegundos definidos abaixo para o próximo case
+  if (tempoAtual - tempoAnterior >= 3000) {
+    tempoAnterior = tempoAtual; // Atualiza a referência de tempo
 
-    switch (estadoCabeca) {
+    // Sequência de movimentos
+    switch (estadoMovimento) {
       case 0:
-        Serial.println("Cabeça - Posição: 0°");
-        servoPescoco.write(0);
-        estadoCabeca = 1;
+        Serial.println("Pecoço = Direita");
+        pescoco.write(10);
+        estadoMovimento = 1;
         break;
+        
       case 1:
-        Serial.println("Cabeça - Posição: 70° (Centro)");
-        servoPescoco.write(70);
-        estadoCabeca = 2;
+        Serial.println("Pecoço = Frente");
+        pescoco.write(67);
+        estadoMovimento = 2;
         break;
+        
       case 2:
-        Serial.println("Cabeça - Posição: 143°");
-        servoPescoco.write(143);
-        estadoCabeca = 3;
+        Serial.println("Pecoço = Esquerda");
+        pescoco.write(135);
+        estadoMovimento = 3;
         break;
+        
       case 3:
-        Serial.println("Cabeça - Posição: 70° (Centro)");
-        servoPescoco.write(70);
-        estadoCabeca = 0;
+        Serial.println("Pecoço = Frente");
+        pescoco.write(67);
+        estadoMovimento = 0; // Reinicia o ciclo
         break;
     }
   }
 }
 
-// Função independente para controlar a sequência alternada das pernas
-void atualizarPernas() {
+
+void andarFrente() {
   unsigned long tempoAtual = millis();
 
-  if (tempoAtual - tempoAnteriorPernas >= intervaloPernas) {
-    tempoAnteriorPernas = tempoAtual;
+  // Verifica se já passaram os milissegundos definidos abaixo para o próximo case
+  if (tempoAtual - tempoAnterior >= 3000) {
+    tempoAnterior = tempoAtual; // Atualiza a referência de tempo
 
-    switch (estadoPernas) {
+    // Sequência de movimentos
+    switch (estadoMovimento) {
       case 0:
-        /*/ 1. Coxa esquerda vai para 40° (enquanto as outras ficam em 70°)
-        Serial.println("Pernas -> Coxa Esquerda: 40°");
-        servoCoxaEsquerda.write(40);
-        servoPeEsquerdo.write(70);
-        servoCoxaDireita.write(70);
-        servoPeDireiro.write(70);*/
-        estadoPernas = 1;
+        Serial.println("Pés para frente");
+        peEsquerdo.write(40); // Pé no chão
+        peDireito.write(40); // Pé no chão
+        coxaEsquerda.write(100); // Coxa para frente
+        coxaDireita.write(30); // Coxa para frente
+        estadoMovimento = 1;
         break;
 
       case 1:
-        /*/ 2. Pé esquerdo vai para 40°
-        Serial.println("Pernas -> Pé Esquerdo: 40°");
-        servoCoxaEsquerda.write(70); // Retorna coxa esquerda ao centro
-        servoPeEsquerdo.write(40);  // Move pé esquerdo
-        servoCoxaDireita.write(70);
-        servoPeDireiro.write(70);*/
-        estadoPernas = 2;
+        Serial.println("Pés para dentro");
+        peEsquerdo.write(70); // Pé para dentro
+        peDireito.write(70); // Pé para fora
+        coxaEsquerda.write(130); // Coxa para direita
+        coxaDireita.write(60); // Coxa para  direita
+        estadoMovimento = 2;
         break;
 
       case 2:
-        /*/ 3. Coxa direita vai para 40°
-        Serial.println("Pernas -> Coxa Direita: 40°");
-        servoCoxaEsquerda.write(70);
-        servoPeEsquerdo.write(70);  // Retorna pé esquerdo ao centro
-        servoCoxaDireita.write(40); // Move coxa direita
-        servoPeDireiro.write(70);*/
-        estadoPernas = 3;
+        Serial.println("Pés para frente");
+        peEsquerdo.write(40); // Pé no chão
+        peDireito.write(40); // Pé no chão
+        coxaEsquerda.write(100); // Coxa para frente
+        coxaDireita.write(30); // Coxa para frente
+        estadoMovimento = 3;
         break;
-
+      
       case 3:
-        // 4. Pé direito vai para 40°
-        Serial.println("Pernas -> Pé Direito: 40°");
-        //servoCoxaEsquerda.write(70);
-        //servoPeEsquerdo.write(70);
-        //servoCoxaDireita.write(70); // Retorna coxa direita ao centro
-        servoPeDireiro.write(70);  // Move pé direito
-        servoPeDireiro.write(0);  // Move pé direito
-        estadoPernas = 0;          // Reinicia o ciclo da caminhada
+        Serial.println("Pés para fora");
+        peEsquerdo.write(10); // Pé para fora
+        peDireito.write(10); // Pé para dentro
+        coxaEsquerda.write(70); // Coxa para esquerda
+        coxaDireita.write(0); // Coxa para  esquerda
+        estadoMovimento = 0;
         break;
     }
   }
