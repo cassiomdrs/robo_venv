@@ -21,10 +21,11 @@ void setup() {
 
   // POSIÇÃO INICIAL DE CADA SERVO MOTOR
   pescoco.write(67);
-  coxaEsquerda.write(100);
+  
   peEsquerdo.write(40);
-  coxaDireita.write(30);
   peDireito.write(40);
+  coxaEsquerda.write(100);
+  coxaDireita.write(30);
 }
 
 void loop() {
@@ -34,12 +35,29 @@ void loop() {
   // ANDAR PARA FRENTE
   //numInicial e numFinal
   //peEsquerdo, peDireito, coxaEsquerda, coxaDireita
-  andar(70,10,  70,10,  70,130, 0,60);
-  andar(10,70,  10,70,  130,70, 60,0);
+  //andar(70,10,  70,10,  70,130, 0,60);
+  //andar(10,70,  10,70,  130,70, 60,0);
 
   // Girar
   //andar(10, 70,   70, 10,   70, 130,   60,  0);
   //andar(70, 10,   10, 70,   130, 70,    0, 60);
+  
+  cabecaNao(67,10);
+  cabecaNao(10,135);
+  cabecaNao(135,67);
+  
+  andar(40,70,  40,70,  100,70, 30,0);
+
+  andar(70,10,  70,10,  70,130, 0,60);
+  andar(10,70,  10,70,  130,70, 60,0);
+
+  andar(70,10,  70,10,  70,130, 0,60);
+  andar(10,70,  10,70,  130,70, 60,0);
+  
+  andar(70,10,  70,10,  70,130, 0,60);
+  andar(10,70,  10,70,  130,70, 60,0);
+
+  andar(70,40,  70,40,  70,100, 0,30);
 
 }
 
