@@ -28,93 +28,59 @@ void setup() {
 }
 
 void loop() {
+  //cabecaNao(10,135);
+  //cabecaNao(135,10);
 
-  //controlarPescoco();
-  andarFrente();
+  // ANDAR PARA FRENTE
+  //numInicial e numFinal
+  //peEsquerdo, peDireito, coxaEsquerda, coxaDireita
+  andar(70,10,  70,10,  70,130, 0,60);
+  andar(10,70,  10,70,  130,70, 60,0);
+
+  // Girar
+  //andar(10, 70,   70, 10,   70, 130,   60,  0);
+  //andar(70, 10,   10, 70,   130, 70,    0, 60);
 
 }
 
-void controlarPescoco() {
-  unsigned long tempoAtual = millis();
-
-  // Verifica se já passaram os milissegundos definidos abaixo para o próximo case
-  if (tempoAtual - tempoAnterior >= 3000) {
-    tempoAnterior = tempoAtual; // Atualiza a referência de tempo
-
-    // Sequência de movimentos
-    switch (estadoMovimento) {
-      case 0:
-        Serial.println("Pecoço = Direita");
-        pescoco.write(10);
-        estadoMovimento = 1;
-        break;
-        
-      case 1:
-        Serial.println("Pecoço = Frente");
-        pescoco.write(67);
-        estadoMovimento = 2;
-        break;
-        
-      case 2:
-        Serial.println("Pecoço = Esquerda");
-        pescoco.write(135);
-        estadoMovimento = 3;
-        break;
-        
-      case 3:
-        Serial.println("Pecoço = Frente");
-        pescoco.write(67);
-        estadoMovimento = 0; // Reinicia o ciclo
-        break;
+// Função auxiliar que move QUALQUER servo de forma fluida
+void moverServoFluido(Servo &motor, int inicial, int final) {
+  if (inicial < final) {
+    for (int angulo = inicial; angulo <= final; angulo++) {
+      motor.write(angulo);
+      delay(15);
+    }
+  } else {
+    for (int angulo = inicial; angulo >= final; angulo--) {
+      motor.write(angulo);
+      delay(15);
     }
   }
 }
 
+void cabecaNao(int anguloInicial, int anguloFinal) {
+  moverServoFluido(pescoco, anguloInicial, anguloFinal);
+}
 
-void andarFrente() {
-  unsigned long tempoAtual = millis();
+void andar(int peEsqIni, int peEsqFin, int peDirIni, int peDirFin, 
+                 int coxaEsqIni, int coxaEsqFin, int coxaDirIni, int coxaDirFin) {
+  
+  // Descobre o maior deslocamento comparando de 2 em 2
+  int maxPassos = max(max(abs(peEsqFin - peEsqIni), abs(peDirFin - peDirIni)),
+                      max(abs(coxaEsqFin - coxaEsqIni), abs(coxaDirFin - coxaDirIni)));
 
-  // Verifica se já passaram os milissegundos definidos abaixo para o próximo case
-  if (tempoAtual - tempoAnterior >= 3000) {
-    tempoAnterior = tempoAtual; // Atualiza a referência de tempo
+  // Executa o movimento de todos juntos passo a passo
+  for (int i = 0; i <= maxPassos; i++) {
+    int anguloPeEsq = map(i, 0, maxPassos, peEsqIni, peEsqFin);
+    int anguloPeDir = map(i, 0, maxPassos, peDirIni, peDirFin);
+    int anguloCoxaEsq = map(i, 0, maxPassos, coxaEsqIni, coxaEsqFin);
+    int anguloCoxaDir = map(i, 0, maxPassos, coxaDirIni, coxaDirFin);
 
-    // Sequência de movimentos
-    switch (estadoMovimento) {
-      case 0:
-        Serial.println("Pés para frente");
-        peEsquerdo.write(40); // Pé no chão
-        peDireito.write(40); // Pé no chão
-        coxaEsquerda.write(100); // Coxa para frente
-        coxaDireita.write(30); // Coxa para frente
-        estadoMovimento = 1;
-        break;
+    peEsquerdo.write(anguloPeEsq);
+    peDireito.write(anguloPeDir);
+    coxaEsquerda.write(anguloCoxaEsq);
+    coxaDireita.write(anguloCoxaDir);
 
-      case 1:
-        Serial.println("Pés para dentro");
-        peEsquerdo.write(70); // Pé para dentro
-        peDireito.write(70); // Pé para fora
-        coxaEsquerda.write(130); // Coxa para direita
-        coxaDireita.write(60); // Coxa para  direita
-        estadoMovimento = 2;
-        break;
-
-      case 2:
-        Serial.println("Pés para frente");
-        peEsquerdo.write(40); // Pé no chão
-        peDireito.write(40); // Pé no chão
-        coxaEsquerda.write(100); // Coxa para frente
-        coxaDireita.write(30); // Coxa para frente
-        estadoMovimento = 3;
-        break;
-      
-      case 3:
-        Serial.println("Pés para fora");
-        peEsquerdo.write(10); // Pé para fora
-        peDireito.write(10); // Pé para dentro
-        coxaEsquerda.write(70); // Coxa para esquerda
-        coxaDireita.write(0); // Coxa para  esquerda
-        estadoMovimento = 0;
-        break;
-    }
+    delay(15); 
   }
 }
