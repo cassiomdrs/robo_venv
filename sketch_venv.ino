@@ -28,7 +28,7 @@ void setup() {
   // POSIÇÃO INICIAL DE CADA SERVO MOTOR
   pescoco.write(67);
   
-  peEsquerdo.write(40);
+  peEsquerdo.write(30);
   peDireito.write(40);
   coxaEsquerda.write(100);
   coxaDireita.write(30);
@@ -53,58 +53,50 @@ void loop() {
 
   if (distancia <= 30) {
   // Ações quando o obstáculo estiver perto (< 30 cm)
-  peEsquerdo.write(40);
+  peEsquerdo.write(30);
   peDireito.write(40);
   coxaEsquerda.write(100);
   coxaDireita.write(30);
   
   Serial.println("Obstáculo próximo! Parando ou ajustando...");
-  cabecaNao(67,10);
+  /*cabecaNao(67,10);
   cabecaNao(10,135);
-  cabecaNao(135,67);
+  cabecaNao(135,67);*/
   } 
   else {
-    // O robô só anda se a distância for MAIOR que 10 cm
-    andar(40,10,  40,10,  100,130, 30,60);
-    andar(10,70,  10,70,  130,70, 60,0);
-    andar(70,40,  70,40,  70,100, 0,30);
+    /*/ O robô só anda se a distância for MAIOR que 10 cm
+    andar(30,0,    40,10,    100,130,   30,60);
+    andar(0,60,    10,70,    130,70,    60,0);
+    andar(60,30,    70,40,    70,100,    0,30);*/
+
+/*---------------------------------------------------------*/
+
+/*/ Andar para frente com os pés invertidos
+    andar(30, 0,   40, 70,   100, 130,  30, 0);
+    andar(0, 60,   70, 10,   130, 70,   0, 60);
+    andar(60, 30,   10, 40,   70, 100,   60, 30);*/
+
+    // Andar para frente com os pés para o mesmo lado
+    andar(30,0,    40,10,    100,130,   30,60);
+    andar(0,60,    10,70,    130,70,    60,0);
+    andar(60,30,    70,40,    70,100,    0,30);
+  
+    /*/ Tentativa de girar
+    //    Pé esq    Pé Dir    Coxa Esq   Coxa Dir
+    andar(30, 0,   40, 40,   100, 130,  30, 30);
+    andar(0, 0,   40, 70,   130, 130,  30, 0);
+
+    andar(0, 60,   70, 70,   130, 70,   0, 0);
+    andar(60, 60,   70, 10,   70, 70,   0, 60);
+    
+    andar(60, 30,   10, 10,   70, 100,   60, 60);
+    andar(30, 30,   10, 40,   100, 100,   60, 30);*/
+
   }
 
   Serial.print("Distancia: ");
   Serial.print(distancia);
   Serial.println(" cm");
-
-  
-  /*  
-  pernasInicial(); // 40, 40, 100, 30
-  delay(300);
-  andar(40,10,  40,10,  100,130, 30,60);
-  andar(10,30,  10,30,  130,90, 60,20);
-  
-  pernasInicial();
-  delay(300);
-  andar(40,70,  40,70,  100,70, 30,0);
-  andar(70,30,  70,30,  70,90, 0,20);
-  */
-
-  /*
-  cabecaNao(67,10);
-  cabecaNao(10,135);
-  cabecaNao(135,67);
-  
-  andar(40,70,  40,70,  100,70, 30,0);
-
-  andar(70,10,  70,10,  70,130, 0,60);
-  andar(10,70,  10,70,  130,70, 60,0);
-
-  andar(70,10,  70,10,  70,130, 0,60);
-  andar(10,70,  10,70,  130,70, 60,0);
-  
-  andar(70,10,  70,10,  70,130, 0,60);
-  andar(10,70,  10,70,  130,70, 60,0);
-
-  andar(70,40,  70,40,  70,100, 0,30);
-  */
 
 }
 
@@ -123,36 +115,43 @@ void moverServoFluido(Servo &motor, int inicial, int final) {
   }
 }
 
-void pernasInicial() {
-  peEsquerdo.write(40);
-  peDireito.write(40);
-  coxaEsquerda.write(100);
-  coxaDireita.write(30);
-}
-
 void cabecaNao(int anguloInicial, int anguloFinal) {
   moverServoFluido(pescoco, anguloInicial, anguloFinal);
 }
 
+
 void andar(int peEsqIni, int peEsqFin, int peDirIni, int peDirFin, 
                  int coxaEsqIni, int coxaEsqFin, int coxaDirIni, int coxaDirFin) {
   
-  // Descobre o maior deslocamento comparando de 2 em 2
-  int maxPassos = max(max(abs(peEsqFin - peEsqIni), abs(peDirFin - peDirIni)),
-                      max(abs(coxaEsqFin - coxaEsqIni), abs(coxaDirFin - coxaDirIni)));
+  // --- FASE 1: Movimento dos Pés ---
+  // Descobre o maior deslocamento apenas para os pés
+  int maxPassosPes = max(abs(peEsqFin - peEsqIni), abs(peDirFin - peDirIni));
+  
+  if (maxPassosPes > 0) {
+    for (int i = 0; i <= maxPassosPes; i++) {
+      int anguloPeEsq = map(i, 0, maxPassosPes, peEsqIni, peEsqFin);
+      int anguloPeDir = map(i, 0, maxPassosPes, peDirIni, peDirFin);
 
-  // Executa o movimento de todos juntos passo a passo
-  for (int i = 0; i <= maxPassos; i++) {
-    int anguloPeEsq = map(i, 0, maxPassos, peEsqIni, peEsqFin);
-    int anguloPeDir = map(i, 0, maxPassos, peDirIni, peDirFin);
-    int anguloCoxaEsq = map(i, 0, maxPassos, coxaEsqIni, coxaEsqFin);
-    int anguloCoxaDir = map(i, 0, maxPassos, coxaDirIni, coxaDirFin);
+      peEsquerdo.write(anguloPeEsq);
+      peDireito.write(anguloPeDir);
 
-    peEsquerdo.write(anguloPeEsq);
-    peDireito.write(anguloPeDir);
-    coxaEsquerda.write(anguloCoxaEsq);
-    coxaDireita.write(anguloCoxaDir);
+      delay(10); // Velocidade dos pés
+    }
+  }
 
-    delay(15); 
+  // --- FASE 2: Movimento das Coxas (só inicia após os pés terminarem) ---
+  // Descobre o maior deslocamento apenas para as coxas
+  int maxPassosCoxas = max(abs(coxaEsqFin - coxaEsqIni), abs(coxaDirFin - coxaDirIni));
+  
+  if (maxPassosCoxas > 0) {
+    for (int i = 0; i <= maxPassosCoxas; i++) {
+      int anguloCoxaEsq = map(i, 0, maxPassosCoxas, coxaEsqIni, coxaEsqFin);
+      int anguloCoxaDir = map(i, 0, maxPassosCoxas, coxaDirIni, coxaDirFin);
+
+      coxaEsquerda.write(anguloCoxaEsq);
+      coxaDireita.write(anguloCoxaDir);
+
+      delay(10); // Delay de 8 ms solicitado para as coxas
+    }
   }
 }
