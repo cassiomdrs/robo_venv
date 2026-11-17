@@ -54,9 +54,21 @@ void loop() {
     delay(500); // Pausa de segurança
   } 
   else {
-    // Executa a sequência de passos de forma fluida
+    // Andar para FRENTE
+    //       PéEsq | PéDir | CoxaEsq | CoxaDir
     if (!andarPasso(0,  10, 120, 75)) return;
     if (!andarPasso(60, 70, 60,  15))  return;
+
+    // Andar para TRÁS
+    //       PéEsq | PéDir | CoxaEsq | CoxaDir
+    //if (!andarPasso(60,  70, 120, 75)) return;
+    //if (!andarPasso(0,  10, 60, 15)) return;
+
+  // pescoco:       Neutro = 67   |  Esquerda  = 135      |   Direita  = 10
+  // peEsquerdo:    Neutro = 30   |  ParaDentro  = 60     |   ParaFora  = 0
+  // peDireito:     Neutro = 40   |  ParaDentro  = 10     |   ParaFora  = 70
+  // coxaEsquerda:  Neutro = 90   |  Esquerda  = 60       |   Direita  = 120
+  // coxaDireita:   Neutro = 45   |  Esquerda  = 15       |   Direita  = 75
   }
 
 }
