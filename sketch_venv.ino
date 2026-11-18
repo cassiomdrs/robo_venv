@@ -37,12 +37,18 @@ void setup() {
   coxaDireita.attach(5);
   peDireito.attach(4);
 
-  // Inicializa na posição neutra segura
-  irParaPosicaoInicial();
+  // Força o envio imediato para a posição neutra ao ligar
+  pescoco.write(POS_NEUTRA_PESCOCO);
+  peEsquerdo.write(POS_NEUTRA_PE_ESQ);
+  peDireito.write(POS_NEUTRA_PE_DIR);
+  coxaEsquerda.write(POS_NEUTRA_COXA_ESQ);
+  coxaDireita.write(POS_NEUTRA_COXA_DIR);
 }
 
 void loop() {
   float distancia = lerDistancia();
+  float distanciaEsq = 0;
+  float distanciaDir = 0;
 
   Serial.print("Distancia: ");
   Serial.print(distancia);
@@ -50,6 +56,18 @@ void loop() {
 
   if (distancia <= 20 && distancia > 0) {
     Serial.println("Obstáculo próximo! Parando e voltando à posição segura...");
+    irParaPosicaoInicial();
+
+    moverPescoco(135);
+    float distanciaEsq = lerDistancia();;
+    Serial.print("Distância Esquerda: ");
+    Serial.println(distanciaEsq);
+
+    moverPescoco(10);
+    float distanciaDir = lerDistancia();
+    Serial.print("Distância Direita: ");
+    Serial.println(distanciaDir);
+
     irParaPosicaoInicial();
     delay(500); // Pausa de segurança
   } 
@@ -115,22 +133,27 @@ float lerDistancia() {
 void irParaPosicaoInicial() {
   int maxPassos1 = max(abs(POS_NEUTRA_PE_ESQ - posAtualPeEsq), abs(POS_NEUTRA_PE_DIR - posAtualPeDir));
   int maxPassos2 = max(abs(POS_NEUTRA_COXA_ESQ - posAtualCoxaEsq), abs(POS_NEUTRA_COXA_DIR - posAtualCoxaDir));
-  int maxPassos = max(maxPassos1, maxPassos2);
+  int maxPassos3 = max(maxPassos1, maxPassos2);
+  int maxPassos  = max(maxPassos3, abs(POS_NEUTRA_PESCOCO - posAtualPescoco)); // Inclui o pescoço no cálculo
 
   if (maxPassos > 0) {
-    int peEsqIni = posAtualPeEsq, peDirIni = posAtualPeDir;
+    int peEsqIni   = posAtualPeEsq,   peDirIni   = posAtualPeDir;
     int coxaEsqIni = posAtualCoxaEsq, coxaDirIni = posAtualCoxaDir;
+    int pescocoIni = posAtualPescoco;
 
     for (int i = 0; i <= maxPassos; i++) {
-      posAtualPeEsq   = map(i, 0, maxPassos, peEsqIni, POS_NEUTRA_PE_ESQ);
-      posAtualPeDir   = map(i, 0, maxPassos, peDirIni, POS_NEUTRA_PE_DIR);
+      posAtualPeEsq   = map(i, 0, maxPassos, peEsqIni,   POS_NEUTRA_PE_ESQ);
+      posAtualPeDir   = map(i, 0, maxPassos, peDirIni,   POS_NEUTRA_PE_DIR);
       posAtualCoxaEsq = map(i, 0, maxPassos, coxaEsqIni, POS_NEUTRA_COXA_ESQ);
       posAtualCoxaDir = map(i, 0, maxPassos, coxaDirIni, POS_NEUTRA_COXA_DIR);
+      posAtualPescoco = map(i, 0, maxPassos, pescocoIni, POS_NEUTRA_PESCOCO); // Atualiza o pescoço
 
       peEsquerdo.write(posAtualPeEsq);
       peDireito.write(posAtualPeDir);
       coxaEsquerda.write(posAtualCoxaEsq);
       coxaDireita.write(posAtualCoxaDir);
+      pescoco.write(posAtualPescoco); // Envia o comando para o servo do pescoço
+      
       delay(10); 
     }
   }
@@ -189,4 +212,20 @@ bool andarPasso(int peEsqAlvo, int peDirAlvo, int coxaEsqAlvo, int coxaDirAlvo) 
   }
 
   return true; 
+}
+
+// Executa apenas o movimento fluido do pescoço até o ângulo alvo
+bool moverPescoco(int alvo) {
+  int maxPassos = abs(alvo - posAtualPescoco);
+  
+  if (maxPassos > 0) {
+    int inicio = posAtualPescoco;
+
+    for (int i = 0; i <= maxPassos; i++) {
+      posAtualPescoco = map(i, 0, maxPassos, inicio, alvo);
+      pescoco.write(posAtualPescoco);
+      delay(10); // Ajuste a velocidade do pescoço aqui (menor = mais rápido)
+    }
+  }
+  return true;
 }
