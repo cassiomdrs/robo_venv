@@ -74,6 +74,16 @@ void loop() {
     //if (!andarPasso(0,  10, 120, 75)) return;
     //if (!andarPasso(60, 70, 60,  45))  return;
 
+    // Virar para ESQUERDA (Giro curto / Próprio eixo)
+    //       PéEsq | PéDir | CoxaEsq | CoxaDir
+    //if (!andarPasso(0,  10, 120, 15)) return;
+    //if (!andarPasso(60, 70, 60,  75)) return;
+
+    // Virar para DIREITA (Giro curto / Próprio eixo)
+    //       PéEsq | PéDir | CoxaEsq | CoxaDir
+    //if (!andarPasso(0,  10, 60,  75)) return;
+    //if (!andarPasso(60, 70, 120, 15)) return;
+
   // pescoco:       Neutro = 67   |  Esquerda  = 135      |   Direita  = 10
   // peEsquerdo:    Neutro = 30   |  ParaDentro  = 60     |   ParaFora  = 0
   // peDireito:     Neutro = 40   |  ParaDentro  = 10     |   ParaFora  = 70
