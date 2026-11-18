@@ -28,6 +28,9 @@ int posAtualCoxaDir  = POS_NEUTRA_COXA_DIR;
 // Variável global de controle de direção (1 = Frente)
 int caminhoLivre = 1;
 
+// Distância mínima de um obstáculo em centímetros
+int distanciaObstaculo = 20;
+
 void setup() {
   Serial.begin(115200);
 
@@ -57,7 +60,7 @@ void loop() {
   Serial.print(distancia);
   Serial.println(" cm");
 
-  if (distancia <= 20 && distancia > 0) {
+  if (distancia <= distanciaObstaculo && distancia > 0) {
     Serial.println("Obstáculo próximo! Parando e voltando à posição segura...");
     irParaPosicaoInicial();
 
@@ -71,7 +74,12 @@ void loop() {
     Serial.print("Distância Direita: ");
     Serial.println(distanciaDir);
 
-    if(distancia >= distanciaEsq && distancia >= distanciaDir){
+    if(distancia <= distanciaObstaculo && distanciaEsq <= distanciaObstaculo && distanciaDir <= distanciaObstaculo){
+      Serial.println("Decisão: Beco sem saída! Executando manobra de escape...");
+      caminhoLivre = 7;
+    }
+    
+    else if(distancia >= distanciaEsq && distancia >= distanciaDir){
       caminhoLivre = 1;
       Serial.println("Decisão: Continuar em Frente");
     }
@@ -104,6 +112,7 @@ void loop() {
         //       PéEsq | PéDir | CoxaEsq | CoxaDir
         if (!andarPasso(0,  10, 60,  75)) return;
         if (!andarPasso(60, 70, 120, 15)) return;
+        caminhoLivre = 1;
         break;
 
       case 3:
@@ -111,6 +120,7 @@ void loop() {
         //       PéEsq | PéDir | CoxaEsq | CoxaDir
         if (!andarPasso(0,  10, 90, 75)) return;
         if (!andarPasso(60, 70, 60,  15))  return;
+        caminhoLivre = 1;
         break;
 
       case 4:
@@ -118,6 +128,7 @@ void loop() {
         //       PéEsq | PéDir | CoxaEsq | CoxaDir
         if (!andarPasso(0,  10, 120, 15)) return;
         if (!andarPasso(60, 70, 60,  75)) return;
+        caminhoLivre = 1;
         break;
 
       case 5:
@@ -125,6 +136,7 @@ void loop() {
         //       PéEsq | PéDir | CoxaEsq | CoxaDir
         if (!andarPasso(0,  10, 120, 75)) return;
         if (!andarPasso(60, 70, 60,  45))  return;
+        caminhoLivre = 1;
         break;
       
       case 6:
@@ -132,6 +144,26 @@ void loop() {
         //       PéEsq | PéDir | CoxaEsq | CoxaDir
         if (!andarPasso(60,  70, 120, 75)) return;
         if (!andarPasso(0,  10, 60, 15)) return;
+        caminhoLivre = 1;
+        break;
+
+      case 7:
+        // Andar para TRÁS
+        //       PéEsq | PéDir | CoxaEsq | CoxaDir
+        if (!andarPasso(60,  70, 120, 75)) return;
+        if (!andarPasso(0,  10, 60, 15)) return;
+
+        if (!andarPasso(60,  70, 120, 75)) return;
+        if (!andarPasso(0,  10, 60, 15)) return;
+
+        // Virar para ESQUERDA (Giro curto / Próprio eixo)
+        //       PéEsq | PéDir | CoxaEsq | CoxaDir
+        if (!andarPasso(0,  10, 120, 15)) return;
+        if (!andarPasso(60, 70, 60,  75)) return;
+
+        if (!andarPasso(0,  10, 120, 15)) return;
+        if (!andarPasso(60, 70, 60,  75)) return;
+        caminhoLivre = 1;
         break;
     }
 
