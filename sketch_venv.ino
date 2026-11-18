@@ -25,6 +25,9 @@ int posAtualPeDir    = POS_NEUTRA_PE_DIR;
 int posAtualCoxaEsq  = POS_NEUTRA_COXA_ESQ;
 int posAtualCoxaDir  = POS_NEUTRA_COXA_DIR;
 
+// Variável global de controle de direção (1 = Frente)
+int caminhoLivre = 1;
+
 void setup() {
   Serial.begin(115200);
 
@@ -59,48 +62,78 @@ void loop() {
     irParaPosicaoInicial();
 
     moverPescoco(135);
-    float distanciaEsq = lerDistancia();;
+    distanciaEsq = lerDistancia();
     Serial.print("Distância Esquerda: ");
     Serial.println(distanciaEsq);
 
     moverPescoco(10);
-    float distanciaDir = lerDistancia();
+    distanciaDir = lerDistancia();
     Serial.print("Distância Direita: ");
     Serial.println(distanciaDir);
+
+    if(distancia >= distanciaEsq && distancia >= distanciaDir){
+      caminhoLivre = 1;
+      Serial.println("Decisão: Continuar em Frente");
+    }
+
+    else if(distanciaDir > distanciaEsq){
+      caminhoLivre = 2;
+      Serial.println("Decisão: Virar à Direita");
+    }
+
+    else{
+      caminhoLivre = 4;
+      Serial.println("Decisão: Virar à Esquerda");
+    }
 
     irParaPosicaoInicial();
     delay(500); // Pausa de segurança
   } 
   else {
-    // Andar para FRENTE
-    //       PéEsq | PéDir | CoxaEsq | CoxaDir
-    if (!andarPasso(0,  10, 120, 75)) return;
-    if (!andarPasso(60, 70, 60,  15))  return;
 
-    // Andar para TRÁS
-    //       PéEsq | PéDir | CoxaEsq | CoxaDir
-    //if (!andarPasso(60,  70, 120, 75)) return;
-    //if (!andarPasso(0,  10, 60, 15)) return;
+    switch (caminhoLivre) {
+      case 1:
+        // Andar para FRENTE
+        //       PéEsq | PéDir | CoxaEsq | CoxaDir
+        if (!andarPasso(0,  10, 120, 75)) return;
+        if (!andarPasso(60, 70, 60,  15))  return;
+        break;
 
-    // Virar para DIREITA (Giro longo)
-    //       PéEsq | PéDir | CoxaEsq | CoxaDir
-    //if (!andarPasso(0,  10, 90, 75)) return;
-    //if (!andarPasso(60, 70, 60,  15))  return;
+      case 2:
+        // Virar para DIREITA (Giro curto / Próprio eixo)
+        //       PéEsq | PéDir | CoxaEsq | CoxaDir
+        if (!andarPasso(0,  10, 60,  75)) return;
+        if (!andarPasso(60, 70, 120, 15)) return;
+        break;
 
-    // Virar para ESQUERDA (Giro longo)
-    //       PéEsq | PéDir | CoxaEsq | CoxaDir
-    //if (!andarPasso(0,  10, 120, 75)) return;
-    //if (!andarPasso(60, 70, 60,  45))  return;
+      case 3:
+        // Virar para DIREITA (Giro longo)
+        //       PéEsq | PéDir | CoxaEsq | CoxaDir
+        if (!andarPasso(0,  10, 90, 75)) return;
+        if (!andarPasso(60, 70, 60,  15))  return;
+        break;
 
-    // Virar para ESQUERDA (Giro curto / Próprio eixo)
-    //       PéEsq | PéDir | CoxaEsq | CoxaDir
-    //if (!andarPasso(0,  10, 120, 15)) return;
-    //if (!andarPasso(60, 70, 60,  75)) return;
+      case 4:
+        // Virar para ESQUERDA (Giro curto / Próprio eixo)
+        //       PéEsq | PéDir | CoxaEsq | CoxaDir
+        if (!andarPasso(0,  10, 120, 15)) return;
+        if (!andarPasso(60, 70, 60,  75)) return;
+        break;
 
-    // Virar para DIREITA (Giro curto / Próprio eixo)
-    //       PéEsq | PéDir | CoxaEsq | CoxaDir
-    //if (!andarPasso(0,  10, 60,  75)) return;
-    //if (!andarPasso(60, 70, 120, 15)) return;
+      case 5:
+        // Virar para ESQUERDA (Giro longo)
+        //       PéEsq | PéDir | CoxaEsq | CoxaDir
+        if (!andarPasso(0,  10, 120, 75)) return;
+        if (!andarPasso(60, 70, 60,  45))  return;
+        break;
+      
+      case 6:
+        // Andar para TRÁS
+        //       PéEsq | PéDir | CoxaEsq | CoxaDir
+        if (!andarPasso(60,  70, 120, 75)) return;
+        if (!andarPasso(0,  10, 60, 15)) return;
+        break;
+    }
 
   // pescoco:       Neutro = 67   |  Esquerda  = 135      |   Direita  = 10
   // peEsquerdo:    Neutro = 30   |  ParaDentro  = 60     |   ParaFora  = 0
