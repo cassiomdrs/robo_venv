@@ -76,6 +76,8 @@ void loop() {
 #include <HTTPClient.h>        // [CODER] Traz as ferramentas para "visitar" um site e entregar um recado, igual um navegador faz, mas sem tela.
 #include <time.h>              // [CODER] Traz as ferramentas para trabalhar com data e hora. [ELETRICO] A placa não tem relógio de pilha; ela precisa perguntar a hora para a internet.
 
+#include <math.h>
+
 // ============================================================
 // CONFIGURAÇÕES (os dados que você pode mudar)
 // ============================================================
@@ -109,6 +111,61 @@ class Led {                       // [CODER] Começa a planta chamada "Led". Tud
     void apagar() { digitalWrite(pino, LOW); }   // [CODER] Manda o pino para o nível baixo. [ELETRICO] LOW = 0 volt; sem "pressão", a corrente para de passar. [LED] Sem corrente = o LED APAGA.
 };                                // [CODER] Fecha a planta Led. O ponto e vírgula depois da chave é obrigatório em classes.
 
+class Microfone {
+  private:
+    int pinoAnalogico;
+    float offsetCalibracao; // Ajuste fino conforme seu módulo e ambiente
+
+  public:
+    Microfone(int pino, float offset = 45.0) {
+      pinoAnalogico = pino;
+      offsetCalibracao = offset;
+    }
+
+    void iniciar() {
+      pinMode(pinoAnalogico, INPUT);
+    }
+
+    int lerDecibeis(int amostras) {
+      if (amostras <= 0) {
+        return 0;
+      }
+
+      int menorValor = 4095;
+      int maiorValor = 0;
+
+      for (int i = 0; i < amostras; i++) {
+        int leitura = analogRead(pinoAnalogico);
+        if (leitura < menorValor) {
+          menorValor = leitura;
+        }
+        if (leitura > maiorValor) {
+          maiorValor = leitura;
+        }
+      }
+
+      int amplitude = maiorValor - menorValor;
+      if (amplitude <= 1) {
+        return 0;
+      }
+
+      // Converte amplitude em escala logarítmica (dB relativo/estimado)
+      float db = 20.0 * log10((float)amplitude) + offsetCalibracao;
+
+      if (db < 0.0) {
+        db = 0.0;
+      }
+
+      return (int)round(db);
+    }
+};
+
+Microfone meuMic(10); // Instanciação do microfone no pino 10
+
+int gerarRuido() {
+  return meuMic.lerDecibeis(20);
+}
+
 // ============================================================
 // CLASSE ALIMENTAAPI (o "carteiro" que leva o ruído até o site)
 // ============================================================
@@ -120,7 +177,8 @@ class AlimentaApi {               // [CODER] Começa a planta chamada "AlimentaA
     int ultimoValor;              // [CODER] Caixinha para guardar o último ruído sorteado (número inteiro).
 
     int gerarRuido() {            // [CODER] Função que SORTEIA e DEVOLVE um número inteiro ("int" no começo diz que ela devolve um número).
-      return random(0, 121);      // [CODER] Sorteia de 0 até 120. O limite de cima (121) nunca sai, por isso usamos 121 para o 120 poder aparecer. "return" entrega o número sorteado para quem chamou a função. [ELETRICO] Aqui é só uma simulação; depois dá para trocar por um microfone de verdade.
+      return ::gerarRuido();
+      //return random(0, 121);      // [CODER] Sorteia de 0 até 120. O limite de cima (121) nunca sai, por isso usamos 121 para o 120 poder aparecer. "return" entrega o número sorteado para quem chamou a função. [ELETRICO] Aqui é só uma simulação; depois dá para trocar por um microfone de verdade.
     }                             // [CODER] Fecha a função gerarRuido.
 
     void conectarWifi() {         // [CODER] Função que conecta a placa no Wi-Fi.
@@ -219,6 +277,7 @@ class AlimentaApi {               // [CODER] Começa a planta chamada "AlimentaA
 // ============================================================
 
 Led meuLed(17);                   // [CODER] Constrói um LED chamado "meuLed" ligado ao pino 17 (GPIO 17). [ELETRICO] GPIO = pino de uso geral da placa. Ligue assim: pino 17 -> resistor (220 a 330 ohms) -> perna LONGA do LED; perna CURTA do LED -> GND. O resistor protege o LED para não queimar com corrente demais. [LED] A perna longa é o positivo (ânodo).
+
 AlimentaApi api(URL_API, COD_LAB); // [CODER] Constrói o carteiro "api", entregando a ele o endereço do site e o código do laboratório.
 
 unsigned long ultimoEnvio = 0;    // [CODER] Caixinha que guarda o MOMENTO (em milissegundos desde que a placa ligou) do último envio. Serve como um cronômetro.
@@ -229,6 +288,8 @@ unsigned long ultimoEnvio = 0;    // [CODER] Caixinha que guarda o MOMENTO (em m
 
 void setup() {                    // [CODER] A função setup é obrigatória: a placa executa o que está aqui uma única vez, ao ligar ou ao apertar o botão RESET.
   Serial.begin(115200);           // [CODER] Liga a conversa com o computador a 115200 bits por segundo. O Monitor Serial precisa estar na MESMA velocidade, senão aparecem símbolos estranhos. [ELETRICO] É a "velocidade da fala" no cabo USB.
+  meuMic.iniciar();
+  
   meuLed.iniciar();               // [CODER] Prepara o pino 17 como saída. [LED] A luzinha fica pronta para ser comandada.
   api.iniciar();                  // [CODER] Prepara o carteiro: sorteio, Wi-Fi e relógio. Pode demorar alguns segundos até conectar.
   ultimoEnvio = millis() - INTERVALO_ENVIO; // [CODER] millis() diz quantos milissegundos se passaram desde que a placa ligou. Descontando o intervalo, o cronômetro "já venceu", e o primeiro envio sai imediatamente no loop, sem esperar 5 s.
@@ -247,4 +308,11 @@ void loop() {                     // [CODER] A função loop também é obrigat�
 
     ultimoEnvio = millis();       // [CODER] Passo 4: anota o momento atual como "último envio", e o cronômetro dos 5 segundos recomeça AGORA, depois do envio. Por isso o LED fica realmente 5 segundos apagado.
   }                               // [CODER] Fecha o "se". Se ainda não deu 5 segundos, a placa só repete o loop (muito rápido) até chegar a hora. Não usamos delay() porque ele "congelaria" a placa; com millis() ela continua livre para outras tarefas.
+
+  int ruido = gerarRuido();
+  Serial.print("Ruído: ");
+  Serial.print(ruido);
+  Serial.println(" dB");
+  delay(1000);      // Espera 1 segundo
+
 }                                 // [CODER] Fecha o loop. A placa volta ao início dele e repete o ciclo: acende -> envia -> apaga -> espera 5 s -> acende...
