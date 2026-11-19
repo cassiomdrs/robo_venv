@@ -64,12 +64,12 @@ void loop() {
     Serial.println("Obstáculo próximo! Parando e voltando à posição segura...");
     irParaPosicaoInicial();
 
-    moverPescoco(135);
+    moverPescoco(125);
     distanciaEsq = lerDistancia();
     Serial.print("Distância Esquerda: ");
     Serial.println(distanciaEsq);
 
-    moverPescoco(10);
+    moverPescoco(20);
     distanciaDir = lerDistancia();
     Serial.print("Distância Direita: ");
     Serial.println(distanciaDir);
@@ -108,8 +108,16 @@ void loop() {
         break;
 
       case 2:
+        // Andar para TRÁS
+        //       PéEsq | PéDir | CoxaEsq | CoxaDir
+        if (!andarPasso(60,  70, 120, 75)) return;
+        if (!andarPasso(0,  10, 60, 15)) return;
+
         // Virar para DIREITA (Giro curto / Próprio eixo)
         //       PéEsq | PéDir | CoxaEsq | CoxaDir
+        if (!andarPasso(0,  10, 60,  75)) return;
+        if (!andarPasso(60, 70, 120, 15)) return;
+
         if (!andarPasso(0,  10, 60,  75)) return;
         if (!andarPasso(60, 70, 120, 15)) return;
         caminhoLivre = 1;
@@ -124,8 +132,16 @@ void loop() {
         break;
 
       case 4:
+        // Andar para TRÁS
+        //       PéEsq | PéDir | CoxaEsq | CoxaDir
+        if (!andarPasso(60,  70, 120, 75)) return;
+        if (!andarPasso(0,  10, 60, 15)) return;
+
         // Virar para ESQUERDA (Giro curto / Próprio eixo)
         //       PéEsq | PéDir | CoxaEsq | CoxaDir
+        if (!andarPasso(0,  10, 120, 15)) return;
+        if (!andarPasso(60, 70, 60,  75)) return;
+
         if (!andarPasso(0,  10, 120, 15)) return;
         if (!andarPasso(60, 70, 60,  75)) return;
         caminhoLivre = 1;
