@@ -31,6 +31,8 @@ int caminhoLivre = 1;
 // Distância mínima de um obstáculo em centímetros
 int distanciaObstaculo = 20;
 
+bool andarPasso(int peEsqAlvo, int peDirAlvo, int coxaEsqAlvo, int coxaDirAlvo, bool checarObstaculo = true);
+
 void setup() {
   Serial.begin(115200);
 
@@ -52,136 +54,133 @@ void setup() {
 }
 
 void loop() {
-  float distancia = lerDistancia();
-  float distanciaEsq = 0;
-  float distanciaDir = 0;
-
-  Serial.print("Distancia: ");
-  Serial.print(distancia);
-  Serial.println(" cm");
-
-  if (distancia <= distanciaObstaculo && distancia > 0) {
-    Serial.println("Obstáculo próximo! Parando e voltando à posição segura...");
-    irParaPosicaoInicial();
-
-    moverPescoco(125);
-    distanciaEsq = lerDistancia();
-    Serial.print("Distância Esquerda: ");
-    Serial.println(distanciaEsq);
-
-    moverPescoco(20);
-    distanciaDir = lerDistancia();
-    Serial.print("Distância Direita: ");
-    Serial.println(distanciaDir);
-
-    if(distancia <= distanciaObstaculo && distanciaEsq <= distanciaObstaculo && distanciaDir <= distanciaObstaculo){
-      Serial.println("Decisão: Beco sem saída! Executando manobra de escape...");
-      caminhoLivre = 7;
-    }
+  
+  if (caminhoLivre == 1) {
     
-    else if(distancia >= distanciaEsq && distancia >= distanciaDir){
-      caminhoLivre = 1;
-      Serial.println("Decisão: Continuar em Frente");
-    }
+    float distancia = lerDistancia();
+    float distanciaEsq = 0;
+    float distanciaDir = 0;
 
-    else if(distanciaDir > distanciaEsq){
-      caminhoLivre = 2;
-      Serial.println("Decisão: Virar à Direita");
-    }
+    Serial.print("Distancia: ");
+    Serial.print(distancia);
+    Serial.println(" cm");
 
-    else{
-      caminhoLivre = 4;
-      Serial.println("Decisão: Virar à Esquerda");
-    }
+    if (distancia <= distanciaObstaculo && distancia > 0) {
+      Serial.println("Obstáculo próximo! Parando e voltando à posição segura...");
+      irParaPosicaoInicial();
 
-    irParaPosicaoInicial();
-    delay(500); // Pausa de segurança
+      moverPescoco(125);
+      distanciaEsq = lerDistancia();
+      Serial.print("Distância Esquerda: ");
+      Serial.println(distanciaEsq);
+
+      moverPescoco(20);
+      distanciaDir = lerDistancia();
+      Serial.print("Distância Direita: ");
+      Serial.println(distanciaDir);
+
+      if(distancia <= distanciaObstaculo && distanciaEsq <= distanciaObstaculo && distanciaDir <= distanciaObstaculo){
+        Serial.println("Decisão: Beco sem saída! Executando manobra de escape...");
+        caminhoLivre = 7;
+      }
+
+      else if(distanciaDir > distanciaEsq){
+        caminhoLivre = 2;
+        Serial.println("Decisão: Virar à Direita");
+      }
+
+      else{
+        caminhoLivre = 4;
+        Serial.println("Decisão: Virar à Esquerda");
+      }
+
+      irParaPosicaoInicial();
+      delay(500); // Pausa de segurança
+    }
   } 
-  else {
 
-    switch (caminhoLivre) {
-      case 1:
-        // Andar para FRENTE
-        //       PéEsq | PéDir | CoxaEsq | CoxaDir
-        if (!andarPasso(0,  10, 120, 75)) return;
-        if (!andarPasso(60, 70, 60,  15))  return;
-        break;
+  switch (caminhoLivre) {
+    case 1:
+      // Andar para FRENTE
+      //       PéEsq | PéDir | CoxaEsq | CoxaDir
+      if (!andarPasso(0,  10, 120, 75, true)) return;
+      if (!andarPasso(60, 70, 60,  15, true)) return;
+      break;
 
-      case 2:
-        // Andar para TRÁS
-        //       PéEsq | PéDir | CoxaEsq | CoxaDir
-        if (!andarPasso(60,  70, 120, 75)) return;
-        if (!andarPasso(0,  10, 60, 15)) return;
+    case 2:
+      // Andar para TRÁS
+      //       PéEsq | PéDir | CoxaEsq | CoxaDir
+      andarPasso(60,  70, 120, 75, false);
+      andarPasso(0,  10, 60, 15, false);
 
-        // Virar para DIREITA (Giro curto / Próprio eixo)
-        //       PéEsq | PéDir | CoxaEsq | CoxaDir
-        if (!andarPasso(0,  10, 60,  75)) return;
-        if (!andarPasso(60, 70, 120, 15)) return;
+      // Virar para DIREITA (Giro curto / Próprio eixo)
+      //       PéEsq | PéDir | CoxaEsq | CoxaDir
+      andarPasso(0,  10, 60,  75, false);
+      andarPasso(60, 70, 120, 15, false);
 
-        if (!andarPasso(0,  10, 60,  75)) return;
-        if (!andarPasso(60, 70, 120, 15)) return;
-        caminhoLivre = 1;
-        break;
+      andarPasso(0,  10, 60,  75, false);
+      andarPasso(60, 70, 120, 15, false);
+      caminhoLivre = 1;
+      break;
 
-      case 3:
-        // Virar para DIREITA (Giro longo)
-        //       PéEsq | PéDir | CoxaEsq | CoxaDir
-        if (!andarPasso(0,  10, 90, 75)) return;
-        if (!andarPasso(60, 70, 60,  15))  return;
-        caminhoLivre = 1;
-        break;
+    case 3:
+      // Virar para DIREITA (Giro longo)
+      //       PéEsq | PéDir | CoxaEsq | CoxaDir
+      andarPasso(0,  10, 90, 75, false);
+      andarPasso(60, 70, 60,  15, false);
+      caminhoLivre = 1;
+      break;
 
-      case 4:
-        // Andar para TRÁS
-        //       PéEsq | PéDir | CoxaEsq | CoxaDir
-        if (!andarPasso(60,  70, 120, 75)) return;
-        if (!andarPasso(0,  10, 60, 15)) return;
+    case 4:
+      // Andar para TRÁS
+      //       PéEsq | PéDir | CoxaEsq | CoxaDir
+      andarPasso(60,  70, 120, 75, false);
+      andarPasso(0,  10, 60, 15, false);
 
-        // Virar para ESQUERDA (Giro curto / Próprio eixo)
-        //       PéEsq | PéDir | CoxaEsq | CoxaDir
-        if (!andarPasso(0,  10, 120, 15)) return;
-        if (!andarPasso(60, 70, 60,  75)) return;
+      // Virar para ESQUERDA (Giro curto / Próprio eixo)
+      //       PéEsq | PéDir | CoxaEsq | CoxaDir
+      andarPasso(0,  10, 120, 15, false);
+      andarPasso(60, 70, 60,  75, false);
 
-        if (!andarPasso(0,  10, 120, 15)) return;
-        if (!andarPasso(60, 70, 60,  75)) return;
-        caminhoLivre = 1;
-        break;
+      andarPasso(0,  10, 120, 15, false);
+      andarPasso(60, 70, 60,  75, false);
+      caminhoLivre = 1;
+      break;
 
-      case 5:
-        // Virar para ESQUERDA (Giro longo)
-        //       PéEsq | PéDir | CoxaEsq | CoxaDir
-        if (!andarPasso(0,  10, 120, 75)) return;
-        if (!andarPasso(60, 70, 60,  45))  return;
-        caminhoLivre = 1;
-        break;
+    case 5:
+      // Virar para ESQUERDA (Giro longo)
+      //       PéEsq | PéDir | CoxaEsq | CoxaDir
+      andarPasso(0,  10, 120, 75, false);
+      andarPasso(60, 70, 60,  45, false);
+      caminhoLivre = 1;
+      break;
       
-      case 6:
-        // Andar para TRÁS
-        //       PéEsq | PéDir | CoxaEsq | CoxaDir
-        if (!andarPasso(60,  70, 120, 75)) return;
-        if (!andarPasso(0,  10, 60, 15)) return;
-        caminhoLivre = 1;
-        break;
+    case 6:
+      // Andar para TRÁS
+      //       PéEsq | PéDir | CoxaEsq | CoxaDir
+      andarPasso(60,  70, 120, 75, false);
+      andarPasso(0,  10, 60, 15, false);
+      caminhoLivre = 1;
+      break;
 
-      case 7:
-        // Andar para TRÁS
-        //       PéEsq | PéDir | CoxaEsq | CoxaDir
-        if (!andarPasso(60,  70, 120, 75)) return;
-        if (!andarPasso(0,  10, 60, 15)) return;
+    case 7:
+      // Andar para TRÁS
+      //       PéEsq | PéDir | CoxaEsq | CoxaDir
+      andarPasso(60,  70, 120, 75, false);
+      andarPasso(0,  10, 60, 15, false);
 
-        if (!andarPasso(60,  70, 120, 75)) return;
-        if (!andarPasso(0,  10, 60, 15)) return;
+      andarPasso(60,  70, 120, 75, false);
+      andarPasso(0,  10, 60, 15, false);
 
-        // Virar para ESQUERDA (Giro curto / Próprio eixo)
-        //       PéEsq | PéDir | CoxaEsq | CoxaDir
-        if (!andarPasso(0,  10, 120, 15)) return;
-        if (!andarPasso(60, 70, 60,  75)) return;
+      // Virar para ESQUERDA (Giro curto / Próprio eixo)
+      //       PéEsq | PéDir | CoxaEsq | CoxaDir
+      andarPasso(0,  10, 120, 15, false);
+      andarPasso(60, 70, 60,  75, false);
 
-        if (!andarPasso(0,  10, 120, 15)) return;
-        if (!andarPasso(60, 70, 60,  75)) return;
-        caminhoLivre = 1;
-        break;
-    }
+      andarPasso(0,  10, 120, 15, false);
+      andarPasso(60, 70, 60,  75, false);
+      caminhoLivre = 1;
+      break;
 
   // pescoco:       Neutro = 67   |  Esquerda  = 135      |   Direita  = 10
   // peEsquerdo:    Neutro = 30   |  ParaDentro  = 60     |   ParaFora  = 0
@@ -241,7 +240,7 @@ void irParaPosicaoInicial() {
 }
 
 // Executa um passo partindo da posição ATUAL até a posição ALVO de forma fluida
-bool andarPasso(int peEsqAlvo, int peDirAlvo, int coxaEsqAlvo, int coxaDirAlvo) {
+bool andarPasso(int peEsqAlvo, int peDirAlvo, int coxaEsqAlvo, int coxaDirAlvo, bool checarObstaculo = true) {
 
   // --- FASE 1: Movimento dos Pés ---
   int maxPassosPes = max(abs(peEsqAlvo - posAtualPeEsq), abs(peDirAlvo - posAtualPeDir));
@@ -251,9 +250,10 @@ bool andarPasso(int peEsqAlvo, int peDirAlvo, int coxaEsqAlvo, int coxaDirAlvo) 
     int peDirIni = posAtualPeDir;
 
     for (int i = 0; i <= maxPassosPes; i++) {
-      if (i % 5 == 0) { 
-        if (lerDistancia() <= 30 && lerDistancia() > 0) {
-          return false; 
+      if (checarObstaculo && (i % 5 == 0)) {
+        float d = lerDistancia();
+        if (d > 0 && d <= distanciaObstaculo) {
+          return false;
         }
       }
 
@@ -275,13 +275,13 @@ bool andarPasso(int peEsqAlvo, int peDirAlvo, int coxaEsqAlvo, int coxaDirAlvo) 
     int coxaDirIni = posAtualCoxaDir;
 
     for (int i = 0; i <= maxPassosCoxas; i++) {
-      if (i % 5 == 0) {
-        if (lerDistancia() <= 30 && lerDistancia() > 0) {
-          return false; 
+      if (checarObstaculo && (i % 5 == 0)) {
+        float d = lerDistancia();
+        if (d > 0 && d <= distanciaObstaculo) {
+          return false;
         }
       }
 
-      // CORREÇÃO APLICADA AQUI: Atualizando corretamente a variável global e o write da coxa direita
       posAtualCoxaEsq = map(i, 0, maxPassosCoxas, coxaEsqIni, coxaEsqAlvo);
       posAtualCoxaDir = map(i, 0, maxPassosCoxas, coxaDirIni, coxaDirAlvo);
 
