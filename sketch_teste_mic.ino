@@ -1,140 +1,107 @@
-#include <WiFi.h>
-#include <HTTPClient.h>
-#include "esp_timer.h"
+#include <Arduino.h>
+#include "driver/i2s_std.h"
 
-const char* WIFI_SSID = "F-30";
-const char* WIFI_SENHA = "Domo@1234";
-const char* SERVER_URL = "http://192.168.0.100:5000/transcrever"; // Troque pelo IP do seu PC
+// Pinos do microfone INMP441
+#define I2S_SCK 4
+#define I2S_WS  5
+#define I2S_SD  6
 
-const int PINO_MIC = 4; // Escolha um pino ADC1 válido na sua ESP32-S3
-const int SAMPLE_RATE = 16000;
-const int SEGUNDOS_GRAVACAO = 2;
-const size_t NUM_AMOSTRAS = SAMPLE_RATE * SEGUNDOS_GRAVACAO;
-const size_t PCM_BYTES = NUM_AMOSTRAS * sizeof(int16_t);
-const size_t WAV_SIZE = 44 + PCM_BYTES;
+#define SAMPLE_RATE 16000
+#define BUFFER_SIZE 256
 
-volatile size_t idxAmostra = 0;
-volatile bool gravando = false;
-int16_t* bufferPCM = nullptr;
-uint8_t* bufferWAV = nullptr;
-esp_timer_handle_t timerAmostra;
+i2s_chan_handle_t rx_handle = NULL;
 
-void IRAM_ATTR onSampleTimer(void* arg) {
-  if (!gravando) return;
-  if (idxAmostra < NUM_AMOSTRAS) {
-    int raw = analogRead(PINO_MIC); // 0..4095 (12 bits)
-    // Centraliza em torno de 2048 e converte para int16_t
-    int32_t centered = (int32_t)raw - 2048;
-    int16_t sample16 = (int16_t)(centered * 16);
-    bufferPCM[idxAmostra++] = sample16;
-  } else {
-    gravando = false;
-    esp_timer_stop(timerAmostra);
-  }
-}
+int32_t samples[BUFFER_SIZE];
 
-void escreverCabecalhoWAV(uint8_t* wav, uint32_t pcmBytes, uint32_t sampleRate) {
-  uint32_t byteRate = sampleRate * 1 * 2; // 1 canal, 16 bits (2 bytes)
-  uint32_t chunkSize = 36 + pcmBytes;
+void configurarMicrofone() {
 
-  memcpy(wav + 0, "RIFF", 4);
-  memcpy(wav + 4, &chunkSize, 4);
-  memcpy(wav + 8, "WAVE", 4);
-  memcpy(wav + 12, "fmt ", 4);
-  uint32_t subchunk1Size = 16;
-  uint16_t audioFormat = 1; // PCM
-  uint16_t numChannels = 1;
-  uint16_t bitsPerSample = 16;
-  uint16_t blockAlign = 2;
-  memcpy(wav + 16, &subchunk1Size, 4);
-  memcpy(wav + 20, &audioFormat, 2);
-  memcpy(wav + 22, &numChannels, 2);
-  memcpy(wav + 24, &sampleRate, 4);
-  memcpy(wav + 28, &byteRate, 4);
-  memcpy(wav + 32, &blockAlign, 2);
-  memcpy(wav + 34, &bitsPerSample, 2);
-  memcpy(wav + 36, "data", 4);
-  memcpy(wav + 40, &pcmBytes, 4);
-}
+  i2s_chan_config_t chan_cfg =
+      I2S_CHANNEL_DEFAULT_CONFIG(
+          I2S_NUM_0,
+          I2S_ROLE_MASTER
+      );
 
-void gravarEEnviar() {
-  if (!bufferPCM || !bufferWAV) {
-    Serial.println("Erro: buffers de audio nao alocados.");
-    return;
-  }
+  ESP_ERROR_CHECK(
+      i2s_new_channel(
+          &chan_cfg,
+          NULL,
+          &rx_handle
+      )
+  );
 
-  idxAmostra = 0;
-  gravando = true;
-  Serial.println("Falando agora... gravando 2s!");
+  i2s_std_config_t std_cfg = {
 
-  esp_timer_start_periodic(timerAmostra, 1000000ULL / SAMPLE_RATE);
+    .clk_cfg = I2S_STD_CLK_DEFAULT_CONFIG(SAMPLE_RATE),
 
-  while (gravando) {
-    delay(10);
-  }
+    .slot_cfg = I2S_STD_PHILIPS_SLOT_DEFAULT_CONFIG(
+        I2S_DATA_BIT_WIDTH_32BIT,
+        I2S_SLOT_MODE_MONO
+    ),
 
-  Serial.println("Gravacao concluida. Montando WAV e enviando...");
-  escreverCabecalhoWAV(bufferWAV, PCM_BYTES, SAMPLE_RATE);
-  memcpy(bufferWAV + 44, bufferPCM, PCM_BYTES);
-
-  if (WiFi.status() == WL_CONNECTED) {
-    HTTPClient http;
-    http.begin(SERVER_URL);
-    http.addHeader("Content-Type", "audio/wav");
-
-    int httpCode = http.POST(bufferWAV, WAV_SIZE);
-    if (httpCode > 0) {
-      String resposta = http.getString();
-      resposta.trim();
-      Serial.print("Voce disse: ");
-      Serial.println(resposta);
-    } else {
-      Serial.print("Falha no HTTP POST: ");
-      Serial.println(http.errorToString(httpCode));
+    .gpio_cfg = {
+      .mclk = I2S_GPIO_UNUSED,
+      .bclk = (gpio_num_t) I2S_SCK,
+      .ws = (gpio_num_t) I2S_WS,
+      .dout = I2S_GPIO_UNUSED,
+      .din = (gpio_num_t) I2S_SD,
+      .invert_flags = {
+        .mclk_inv = false,
+        .bclk_inv = false,
+        .ws_inv = false
+      }
     }
-    http.end();
-  } else {
-    Serial.println("Wi-Fi desconectado.");
+  };
+
+  ESP_ERROR_CHECK(
+      i2s_channel_init_std_mode(rx_handle, &std_cfg)
+  );
+
+  ESP_ERROR_CHECK(
+      i2s_channel_enable(rx_handle)
+  );
+
+  Serial.println("Microfone I2S inicializado!");
+}
+
+void lerAudio() {
+
+  size_t bytes_read = 0;
+
+  esp_err_t resultado = i2s_channel_read(
+      rx_handle,
+      samples,
+      sizeof(samples),
+      &bytes_read,
+      1000
+  );
+
+  if (resultado == ESP_OK && bytes_read > 0) {
+
+    int quantidade = bytes_read / sizeof(int32_t);
+
+    for (int i = 0; i < quantidade; i++) {
+
+      // Extrai os 24 bits úteis do INMP441
+      int32_t audio = samples[i] >> 8;
+
+      Serial.println(audio);
+    }
   }
 }
 
 void setup() {
+
   Serial.begin(115200);
-  analogReadResolution(12);
-  analogSetPinAttenuation(PINO_MIC, ADC_11db);
 
-  // Usa PSRAM se disponível, senão heap normal
-  if (psramFound()) {
-    bufferPCM = (int16_t*)ps_malloc(PCM_BYTES);
-    bufferWAV = (uint8_t*)ps_malloc(WAV_SIZE);
-  } else {
-    bufferPCM = (int16_t*)malloc(PCM_BYTES);
-    bufferWAV = (uint8_t*)malloc(WAV_SIZE);
-  }
+  delay(1000);
 
-  esp_timer_create_args_t timerArgs = {
-    .callback = &onSampleTimer,
-    .arg = nullptr,
-    .dispatch_method = ESP_TIMER_TASK,
-    .name = "mic_adc_16khz"
-  };
-  esp_timer_create(&timerArgs, &timerAmostra);
+  Serial.println("Iniciando ESP32-S3...");
 
-  WiFi.begin(WIFI_SSID, WIFI_SENHA);
-  Serial.print("Conectando ao Wi-Fi");
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
-    Serial.print(".");
-  }
-  Serial.println("\nConectado! IP: " + WiFi.localIP().toString());
-  Serial.println("Envie 'g' no Serial para gravar 2s e transcrever.");
+  configurarMicrofone();
 }
 
 void loop() {
-  if (Serial.available() > 0) {
-    char cmd = Serial.read();
-    if (cmd == 'g' || cmd == 'G') {
-      gravarEEnviar();
-    }
-  }
+
+  lerAudio();
+
 }
